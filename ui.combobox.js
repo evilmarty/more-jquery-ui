@@ -45,9 +45,11 @@
         this.container.addClass('ui-state-disabled');
       }
       
-      this.control = $('<div class="ui-combobox-control"><span class="ui-icon ui-icon-triangle-1-s" /></div>')
-        .click(function() { self.toggle(); })
-        .appendTo(this.container);
+      if (this.options.control) {
+        this.control = $('<div class="ui-combobox-control"><span class="ui-icon ui-icon-triangle-1-s" /></div>')
+          .click(function() { if (!self.options.disabled) self.toggle(); })
+          .appendTo(this.container);
+      }
       
       this.dataElement = $('<div class="ui-combobox-list ui-widget-content ui-corner-bottom"></div>')
         .css('position', 'absolute')
@@ -59,7 +61,7 @@
         $.each(this.element[0].options, function() {
           data[this.value] = this.text;
         });
-        this._data(data);
+        this.options.data = data;
         
         var attributes = {};
         $.each(this.element[0].attributes, function() {
@@ -68,30 +70,45 @@
         var input = $('<input />').attr(attributes).attr('type', 'text');
         this.element.replaceWith(input);
         this.element = input;
+        this.wasSelect = true;
       }
       
       this.collapsed = true;
       this.selectedIndex = 0;
       this.highlightedIndex = -1;
-      this.length = 0;
-      this.shownLength = 0;
+      this.refresh = false;
       
       this.element
         .attr('autocomplete', 'off')
-        .bind(this.options.event, function() { self._focus(); })
-        .bind('blur', function() { self._blur(); })
-        .bind('keydown', function(e) { self._keydown(e); })
-        .bind('keyup', function(e) { self._keyup(e); });
+        .bind(this.options.event + '.combobox', function() { self._focus(); })
+        .bind('blur.combobox', function() { self._blur(); })
+        .bind('keydown.combobox', function(e) { self._keydown(e); })
+        .bind('keyup.combobox', function(e) { self._keyup(e); });
+    },
+    destroy: function() {
+      this.container.before(this.element).remove();
+      this.element
+        .removeAttr('autocomplete')
+        .unbind(this.options.event + '.combobox')
+        .unbind('blur.combobox')
+        .unbind('keydown.combobox')
+        .unbind('keyup.combobox');
+        
+      // TODO: rebuild old select-list
     },
     expand: function() {
-      if (!this.collapsed || this._length == 0) return;
+      if (!this.collapsed) return;
+      this._refresh();
       
       var offset = this.element.offset();
       offset.top = offset.top + this.element[this.options.height]();
       
       this.dataElement.css({left: offset.left, top: offset.top, width: this.element[this.options.width]()}).show(this.options.animated);
       this.collapsed = false;
-      this.control.children('.ui-icon').removeClass('ui-icon-triangle-1-s').addClass('ui-icon-triangle-1-n');
+      
+      if (this.options.control) {
+        this.control.children('.ui-icon').removeClass('ui-icon-triangle-1-s').addClass('ui-icon-triangle-1-n');
+      }
       
       this._select(-1);
     },
@@ -100,25 +117,58 @@
       
       this.dataElement.hide(this.options.animated);
       this.collapsed = true;
-      this.control.children('.ui-icon').removeClass('ui-icon-triangle-1-n').addClass('ui-icon-triangle-1-s');
+      
+      if (this.options.control) {
+        this.control.children('.ui-icon').removeClass('ui-icon-triangle-1-n').addClass('ui-icon-triangle-1-s');
+      }
     },
     toggle: function() {
       this[this.collapsed ? 'expand' : 'collapse']();
     },
-    setData: function(key, value) {
+    enable: function() {
+      this.element.removeAttr('disabled');
+      this.container.removeClass('ui-state-disabled');
+      $.widget.prototype.enable.apply(self, arguments);
+    },
+    disable: function() {
+      this.element.attr('disabled', true);
+      this.container.addClass('ui-state-disabled');
+      this.collapse();
+      $.widget.prototype.disable.apply(self, arguments);
+    },
+    _getData: function(key) {
+      switch (key) {
+        case 'selectedIndex':
+          return this.selectedIndex;
+      }
+      $.widget.prototype._getData.apply(self, arguments);
+    },
+    _setData: function(key, value) {
       switch (key) {
         case 'data':
-          this._data(value);
+          this.options.data = value;
+          if (!this.collapsed) {
+            this._update();
+          }
+          else {
+            this.refresh = true;
+          }
           break;
         case 'selectedIndex':
           this._select(value);
           break;
       }
+      $.widget.prototype._setData.apply(self, arguments);
+    },
+    _refresh: function() {
+      if (this.refresh) {
+        this._update();
+        this.refresh = false;
+      }
     },
     _focus: function() {
       this.container.addClass('ui-state-focus');
       this.expand();
-      this.element.focus();
     },
     _blur: function() {
       this.container.removeClass('ui-state-focus');
@@ -152,71 +202,88 @@
       }
     },
     _keyup: function(e) {
-      if (e.keyCode == 9 || e.keyCode == 13 || e.keyCode == 27) return;
+      switch (e.keyCode) {
+        case 9:     // tab
+        case 13:    // return
+        case 27:    // esc
+        case 37:    // left
+        case 39:    // right
+        case 38:    // up
+        case 40:    // down
+          return;
+      }
       
-      var value = this.element.val();
-      if (this.options.escapeHtml) {
-        this._textHighlight(value);
-      }
-      if (this.options.autoFilter) {
-        this._filter(value);
-      }
-      if (this.options.suggest && e.keyCode != 38 && e.keyCode != 40) {
-        this._suggest(value);
-      }
+      this._update();
     },
-    _data: function(data) {
-      var callback = null;
+    _update: function() {
+      var value = $.trim(this.element.val()), data = this.options.data;
+      
       if ($.isFunction(data)) {
-        this.dataType = 'callback';
-        callback = '_dataCallback';
+        data = data.call(this.element[0], value);
       }
-      else if (typeof value == 'string') {
-        this.dataType = 'ajax';
-        callback = '_dataAjax';
+      else if (typeof data == 'string') {
+        this._ajax(data);
+        data = {};
       }
       else {
-        this.dataType = 'list';
-        callback = '_dataList';
+        if ($.isArray(data)) {
+          data = arrayToHash(data);
+        }
+        if (this.options.autoFilter) {
+          data = this._filter(data, value);
+        }
       }
-      this[callback](data);
-    },
-    _dataList: function(data) {
       if ($.isArray(data)) {
         data = arrayToHash(data);
       }
       
-      var list = $('<ul></ul>'), length = 0, self = this;
-      $.each(data, function(k, v) {
-        $("<li></li>")[self.options.escapeHtml ? 'text' : 'html']($.trim(v))
-          .data('combobox:value', k)
+      this._populate(data);
+    },
+    _populate: function(data) {
+      if (data.length == 0) {
+        if (!this.collapsed) this.collapse();
+        return;
+      }
+      
+      var list = $('<ul></ul>'), value = this.element.val(), length = 0, self = this, div = $('<div></div>');
+      
+      $.each(data, function(itemValue, originalText) {
+        var text = $.trim(originalText);
+        if (self.options.escapeHtml) {
+          text = highlight(div.text(text).text(), value, self.options.textHighlighter);
+        }
+        $("<li></li>").html(text)
+          .data('combobox:value', itemValue)
           .data('combobox:index', length++)
+          .data('combobox:text', originalText)
           .mouseenter(function() { self._highlight($(this).data('combobox:index')); })
-          .click(function() { self._select($(this).data('combobox:index')); self.collapse(); })
+          .click(function() { self._select($(this).data('combobox:index')); })
           .appendTo(list);
       });
       this.dataElement.html('').append(list);
-      this._length = this.shownLength = length;
-      this.data = data;
     },
-    _dataCallback: function(callback) {
-      var data = callback.call(this, this.element.val());
-      this._dataList(data);
-    },
-    _dataAjax: function(url) {
+    _ajax: function(url) {
       var options = $.extend(this.options.ajaxOptions, {url: url}), self = this;
+      options.data = options.data || {};
       options.data[this.element[0].name] = this.element.val();
       options.success = function(data, textStatus) {
-        self._dataList(data);
+        if ($.isArray(data)) {
+          data = arrayToHash(data);
+        }
+        self._populate(data);
       }
       $.ajax(options);
-      this._dataList(new Array());
     },
     _select: function(index) {
-      var value = this.dataElement.find('ul > li').eq(index).data('combobox:value');
-      this.element.val(value);
+      var item = this.dataElement.find('ul > li').eq(index);
+      if (item.data('combobox:index') != index) return;
+      
+      var text = item.data('combobox:text'), value = item.data('combobox:value');
+      
       this.selectedIndex = index;
-      this._trigger('selected');
+      this._trigger('select', null, {index: index, value: value, text: text});
+      
+      this.collapse();
     },
     _highlight: function(index) {
       var query = this.dataElement.find('ul > li');
@@ -240,56 +307,31 @@
       }
       this._highlight(index);
     },
-    _textHighlight: function(value) {
-      value = $.trim(value);
-      var highlighter = this.options.textHighlighter;
-      this.dataElement.find('ul > li').each(function() {
-        var text = highlight($(this).text(), value, highlighter);
-        $(this).html(text);
+    _filter: function(data, value) {
+      var startsWith = new RegExp('^' + value, 'i'), newList = {};
+      
+      $.each(data, function(key, text) {
+        if (text.match(startsWith)) {
+          newList[key] = text;
+        }
       });
-    },
-    _filter: function(value) {
-      value = regexpEscape($.trim(value));
-      var startsWith = new RegExp('^' + value, 'i'), 
-          equals = new RegExp('^' + value + '$', 'i'), 
-          match = false,
-          count = 0;
-      this.dataElement.find('ul > li').each(function() {
-        var text = $(this).text(), m = text.match(startsWith);
-        $(this)[m ? 'show' : 'hide']();
-        if (text.match(equals)) match = true;
-        if (m) ++count;
-      });
-      if ((count == 0 || (count == 1 && this.selectedIndex == this.highlightedIndex)) && !this.collapsed) {
-        this.collapse();
-      }
-      else if ((count > 0 || count == 1 && (this.selectedIndex != this.highlightedIndex || this.highlightedIndex == -1)) && this.collapsed) {
-        this.expand();
-      }
-      this.shownLength = count;
-    },
-    _suggest: function(value) {
-      value = $.trim(value);
-      var startsWith = new RegExp('^' + regexpEscape(value), 'i'),
-          result = this.dataElement.find('ul > li:visible').filter(function() {
-            return $(this).text().match(startsWith);
-          }).eq(0);
-      if (result.length) {
-        this._highlight(result.data('combobox:index'));
-      }
+      return newList;
     }
   });
   $.extend($.ui.combobox, {
     defaults: {
       animated: 'blind',
-      ajaxOptions: {},
+      ajaxOptions: {dataType: 'json'},
       autoFilter: true,
+      control: true,
       event: 'focus',
       height: 'outerHeight',
-      data: [],
+      data: {},
       escapeHtml: true,
       overrideLocalData: false,
-      suggest: true,
+      select: function(event, ui) {
+        this.val(ui.value);
+      },
       textHighlighter: '<strong>$1</strong>',
       width: 'outerWidth'
     }
