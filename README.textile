@@ -19,10 +19,10 @@ h3. Options
 * _event_ - the event to trigger the dropdown list when not empty. (Default: focus)
 * _height_ - the method to calculate the height of the input. (Default: outerHeight)
 * _data_ - the data to populate the dropdown list. This can be one of three things:
-  # An array of strings
-  # A key-value object (or hash) with the value being used when displaying in the dropdown list, while the key is the value when selected.
-  # A callback function with the value of the input passed as the argument. The function should return an array or a hash. The *this* keyword is the input element.
-  # A url. The request [for now] must return either an array or a hash in json.
+*# An array of strings
+*# A key-value object (or hash) with the value being used when displaying in the dropdown list, while the key is the value when selected.
+*# A callback function with the value of the input passed as the argument. The function should return an array or a hash. The *this* keyword is the input element.
+*# A url. The request [for now] must return either an array or a hash in json.
   *Note* - if the input is a select list then not specifying this option will use the options from the select list itself.
 * _escapeHtml_ - escape the display text in the dropdown list. (Default: false)
 * _overrideLocalData_ - for use when input is a select list to force using the options when not empty. (Default: false)
