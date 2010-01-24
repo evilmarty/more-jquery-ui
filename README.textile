@@ -1,0 +1,53 @@
+h1. More jQuery UI
+
+A bunch of widgets for use with jQuery UI. They are:
+
+h2. Combobox
+
+For use on textfields and select boxes and turns them into a flexible combobox with support for ajax.
+
+h3. Usage
+
+<pre>$('#some_textfield).combobox()</pre>
+
+h3. Options
+
+* _animated_ - the effect used in showing and hiding the droplist. See "jQuery UI Effects":http://jqueryui.com/demos/effect/ for a list of effects.
+* _ajaxOptions_ - same options as "jQuery.ajax":http://api.jquery.com/jQuery.ajax/.
+* _autoFilter_ - when using a collection to filter the list as user types text. (Default: true)
+* _control_ - show the dropdown button next the input. (Default: true)
+* _event_ - the event to trigger the dropdown list when not empty. (Default: focus)
+* _height_ - the method to calculate the height of the input. (Default: outerHeight)
+* _data_ - the data to populate the dropdown list. This can be one of three things:
+  # An array of strings
+  # A key-value object (or hash) with the value being used when displaying in the dropdown list, while the key is the value when selected.
+  # A callback function with the value of the input passed as the argument. The function should return an array or a hash. The *this* keyword is the input element.
+  # A url. The request [for now] must return either an array or a hash in json.
+  *Note* - if the input is a select list then not specifying this option will use the options from the select list itself.
+* _escapeHtml_ - escape the display text in the dropdown list. (Default: false)
+* _overrideLocalData_ - for use when input is a select list to force using the options when not empty. (Default: false)
+* _selectedIndex_ - get or set the selected item in the dropdown list.
+* _textHighlighter_ - highlight matching entries in the dropdown list. Specify _false_ to disable. (Default: "<strong>$1</strong>")
+* _width_ - the method to calculate the width of the input. (Default: outerWidth)
+
+h3. Events
+
+* select - triggered when an item is selected from the dropdown list. The _ui_ argument contains _value_, _index_ and _text_ of the item selected.
+
+h3. Methods
+
+* _expand_ - to expand the dropdown list
+* _collapse_ - to collapse the dropdown list
+* _toggle_ - collapse or expand the dropdown list
+* _enable_ - enable the element
+* _disable_ - disable the element
+
+h2. Multiupload
+
+A multi-file ajax file uploader using File API and XmlHttpRequest, also supports dragging and dropping files
+from the desktop. (Currently supports only Firefox 3.6 - maybe 3.5).
+
+h2. TODO
+
+# finish documentation for multiupload
+# IE testing for combobox
