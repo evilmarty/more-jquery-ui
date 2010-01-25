@@ -197,6 +197,9 @@
             return;
         }
       }
+      else if (e.keyCode == 40) {
+        this.expand();
+      }
       else if (e.keyCode == 9 || e.keyCode == 13) {
         return;
       }
@@ -254,36 +257,47 @@
         }
         $("<li></li>").html(text)
           .data('combobox:value', itemValue)
-          .data('combobox:index', length++)
           .data('combobox:text', originalText)
-          .mouseenter(function() { self._highlight($(this).data('combobox:index')); })
-          .click(function() { self._select($(this).data('combobox:index')); })
+          .mouseenter(function() { self._highlight(self._indexFor(this)); })
+          .click(function() { self._select(self._indexFor(this)); })
           .appendTo(list);
       });
       this.dataElement.html('').append(list);
     },
     _ajax: function(url) {
-      var options = $.extend(this.options.ajaxOptions, {url: url}), self = this;
-      options.data = options.data || {};
-      options.data[this.element[0].name] = this.element.val();
-      options.success = function(data, textStatus) {
-        if ($.isArray(data)) {
-          data = arrayToHash(data);
+      var value = this.element.val();
+      
+      if ($.ui.combobox.cache[value] === undefined) {
+        var options = $.extend(this.options.ajaxOptions, {url: url}), self = this;
+        options.data = options.data || {};
+        options.data[this.options.paramName || this.element[0].name] = value;
+        options.success = function(data, textStatus) {
+          if ($.isArray(data)) {
+            data = arrayToHash(data);
+          }
+          
+          $.ui.combobox.cache[value] = data;
+          
+          self._populate(data);
+          self.expand();
         }
-        self._populate(data);
+        $.ajax(options);
       }
-      $.ajax(options);
+      else {
+        this._populate($.ui.combobox.cache[value]);
+        this.expand();
+      }
     },
     _select: function(index) {
       var item = this.dataElement.find('ul > li').eq(index);
-      if (item.data('combobox:index') != index) return;
+      if (this.element.val() == '') return;
       
       var text = item.data('combobox:text'), value = item.data('combobox:value');
       
       this.selectedIndex = index;
-      this._trigger('select', null, {index: index, value: value, text: text});
+      this._trigger('select', null, {index: this._indexFor(item[0]), value: value, text: text});
       
-      this.collapse();
+      // this.collapse();
     },
     _highlight: function(index) {
       var query = this.dataElement.find('ul > li');
@@ -316,6 +330,9 @@
         }
       });
       return newList;
+    },
+    _indexFor: function(item) {
+      return this.dataElement.find('ul > li').index(item);
     }
   });
   $.extend($.ui.combobox, {
@@ -329,11 +346,13 @@
       data: {},
       escapeHtml: true,
       overrideLocalData: false,
+      paramName: null,
       select: function(event, ui) {
-        this.val(ui.value);
+        $(this).val(ui.value);
       },
       textHighlighter: '<strong>$1</strong>',
       width: 'outerWidth'
-    }
+    },
+    cache: {}
   });
 })(jQuery);
