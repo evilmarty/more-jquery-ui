@@ -32,7 +32,7 @@ h3. Options
 
 h3. Events
 
-* select - triggered when an item is selected from the dropdown list. The _ui_ argument contains _value_, _index_ and _text_ of the item selected.
+* _select_ - triggered when an item is selected from the dropdown list. The _ui_ argument contains _value_, _index_ and _text_ of the item selected.
 
 h3. Methods
 
@@ -46,6 +46,37 @@ h2. Multiupload
 
 A multi-file ajax file uploader using File API and XmlHttpRequest, also supports dragging and dropping files
 from the desktop. (Currently supports only Firefox 3.6 - maybe 3.5).
+
+h2. Imagecrop
+
+h3. Usage
+
+<pre>$('img').imagecrop();</pre>
+
+h3. Options
+
+* _aspectRatio_ - the aspect ratio of the selection. 0 - disabled, 1 - width = height. (Default: 0)
+* _cornerHandles_ - display the corner handles on the selection. (Default: true)
+* _sideHandles_ - display the side handles on the selection. (Default: true)
+* _maxSize_ - the maximum size of the selection in an array. (Default: [0, 0])
+* _minSize_ - the minimum size of the selection in an array. (Default: [0, 0])
+* _selection_ - the selection as an array/object of the dimensions. (_ie. left, top, width, height_)
+* _allowSelect_ - allow the user to make a selection on the image. (Default: true)
+* _allowResize_ - allow the user to resize the selection. (Default: true)
+* _allowMove_ - allow the user to move the selection. (Default: true)
+
+h3. Events
+
+* _load_ - when the image is completely loaded, otherwise is triggered after the widget is initialised.
+* _change_ - triggered when the selection is still being made or changed.
+* _select_ - triggered when the selection or adjustment has been completed.
+
+h3. Methods
+
+* _select_ - select the specified region with a passed in array. (_ie. left, top, width, height_)
+* _enable_ - enable the widget
+* _disable_ - disable the widget
+* _destroy_ - remove the imagecrop widget from the image.
 
 h2. TODO
 
