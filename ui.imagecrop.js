@@ -35,11 +35,11 @@
 			x1 = y1 = 0;
 		}
 		
-		this.x1(x1).x2(x2);
+		this.x1(x1).y1(y1);
 		if (size)
 			this.width(x2).height(y2);
 		else
-			this.y1(y1).y2(y2);
+			this.x2(x2).y2(y2);
 		
 		return this.normalise();
 	}
@@ -347,7 +347,10 @@
 			this.oldStyles = {position: this.element.css('position'), zIndex: this.element.css('zIndex')};
 			this.element.css({position: 'relative', zIndex: 0});
 			
-			this._refresh();
+			if (this.options.selection)
+				this._setData('selection', this.options.selection);
+			else
+				this._refresh();
 			this._trigger('load', null);
 		},
 		_getData: function(key) {
@@ -582,7 +585,7 @@
 			this._refresh();
 		},
 		select: function(rect) {
-			if (!rect instanceof Rect) rect = new Rect(rect, 0, 0, 0, true);
+			if (!(rect instanceof Rect)) rect = new Rect(rect, 0, 0, 0, true);
 			this._select(rect);
 			this._trigger('select', null, this.options.selection.toProp());
 		},
